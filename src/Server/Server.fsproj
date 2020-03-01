@@ -6,6 +6,11 @@
   <ItemGroup>
     <None Include="paket.references" />
     <Compile Include="Types.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Database.fs" />
+    <Compile Include="AuthActions.fs" />
+    <Compile Include="Perfiles.fs" />
+    <Compile Include="Palabras.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

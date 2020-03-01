@@ -1,32 +1,30 @@
-open System.IO
-open System.Threading.Tasks
-
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open FSharp.Control.Tasks.V2
 open Giraffe
 open Saturn
 open Types
+open Utils
+open Microsoft.AspNetCore.Authentication.JwtBearer
 
-let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
-
-let port =
-    "PORT"
-    |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
+let jsonpipeline = pipeline {
+    plug acceptJson
+}
 
 let webApp = router {
-    get "/api/init" (fun next ctx ->
-        task {
-            let counter = { Value = 42 }
-            return! json counter next ctx
-        })
+    pipe_through jsonpipeline
+
+    forward "/auth" AuthActions.routes
+    forward "/api/perfiles" Perfiles.rutas
+    forward "/api/palabras" Palabras.rutas
 }
 
 let app = application {
-    url ("http://0.0.0.0:" + port.ToString() + "/")
+    url ("http://0.0.0.0:" + Utils.port.ToString() + "/")
     use_router webApp
     memory_cache
     use_gzip
+    use_jwt_authentication Utils.secretKey Utils.issuer
 }
 
 run app
