@@ -1,4 +1,5 @@
 [Saturn Framework]: https://saturnframework.org/
+[SAFE Template]: https://safe-stack.github.io/docs/template-heroku/
 
 # Palabrator API
 Few years ago I made a Nativescript Mobile application for my son when he was about two years old. The app was pretty simple, it was just a simple slideshow of fruits with a rotative animation when clicked the fruit bounced and made a noise...
