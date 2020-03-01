@@ -1,3 +1,6 @@
 group Server
     FSharp.Core
     Saturn
+    Npgsql
+    Npgsql.FSharp
+    BCrypt.Net-Next
