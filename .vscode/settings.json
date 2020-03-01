@@ -1,0 +1,13 @@
+{
+  "sqltools.connections": [
+    {
+      "database": "posgrito",
+      "dialect": "PostgreSQL",
+      "name": "Posgrito",
+      "password": "Admin123",
+      "port": 5432,
+      "server": "localhost",
+      "username": "admin"
+    }
+  ]
+}
