@@ -1,5 +1,5 @@
 [<RequireQualifiedAccess>]
-module AuthActions
+module AccionesAuth
 
 open System
 open System.IdentityModel.Tokens.Jwt
@@ -11,7 +11,65 @@ open Giraffe
 open Saturn
 open Types
 open BCrypt.Net
-open Database
+open Npgsql.FSharp
+
+let private crearUsuario (usuario: SignupPayload) =
+    async {
+        let insert = """
+            INSERT INTO usuarios
+                (nombre, apellidos, correo, usuario, contrasena)
+            VALUES(@nombre, @apellidos, @correo, @usuario, @contrasena);
+            """
+
+        let insertParams =
+            [ "@nombre", Sql.string usuario.nombre
+              "@apellidos", Sql.string usuario.apellidos
+              "@correo", Sql.string usuario.correo
+              "@usuario", Sql.string usuario.usuario
+              "@contrasena", Sql.string usuario.contrasena ]
+
+        let afterInsert = """
+                SELECT id, nombre, apellidos, correo, usuario FROM usuarios WHERE correo = @correo AND usuario = @usuario
+                """
+
+        let afterInsertParams =
+            [ "@correo", Sql.string usuario.correo
+              "@usuario", Sql.string usuario.usuario ]
+
+        let! resultados = Database.prepareDefault insert insertParams |> Sql.executeNonQueryAsync
+        match resultados with
+        | Error err -> return Error err
+        | Ok _ ->
+            return! Database.prepareDefault afterInsert afterInsertParams
+                    |> Sql.executeAsync (fun reader ->
+                        {| id = reader.string "id"
+                           nombre = reader.string "nombre"
+                           apellidos = reader.string "apellidos"
+                           correo = reader.string "correo"
+                           usuario = reader.string "usuario" |})
+    }
+
+let private buscarUsuario (criterio: BusquedaUsuario): Result<Usuario list, exn> Async =
+    let statement =
+        match criterio with
+        | Correo correo ->
+            let select = "SELECT * FROM usuarios WHERE correo = @correo"
+            let selectParams = [ "@correo", Sql.string correo ]
+            Database.prepareDefault select selectParams
+        | Usuario usuario ->
+            let select = "SELECT * FROM usuarios WHERE usuario = @usuario"
+            let selectParams = [ "@usuario", Sql.string usuario ]
+            Database.prepareDefault select selectParams
+    statement
+    |> Sql.executeAsync (fun reader ->
+        { id = reader.int "id"
+          nombre = reader.string "nombre"
+          apellidos = reader.string "apellidos"
+          correo = reader.string "correo"
+          usuario = reader.string "usuario"
+          contrasena = reader.string "contrasena" })
+
+
 
 let private generateToken email =
     let claims =
@@ -21,10 +79,10 @@ let private generateToken email =
     |> Auth.generateJWT (Utils.secretKey, SecurityAlgorithms.HmacSha256) Utils.issuer (DateTime.UtcNow.AddHours(1.0))
 
 
-let private login (next: HttpFunc) (ctx: HttpContext) =
+let private inicioSesion (next: HttpFunc) (ctx: HttpContext) =
     task {
         let! payload = ctx.BindJsonAsync<LoginPayload>()
-        let! result = AuthQueries.buscarUsuario (Correo payload.email)
+        let! result = buscarUsuario (Correo payload.email)
         let usuario =
             match result with
             | Ok usuarios -> usuarios |> List.tryHead
@@ -43,28 +101,32 @@ let private login (next: HttpFunc) (ctx: HttpContext) =
         | None -> return! setStatusCode 404 next ctx
     }
 
-let private signup (next: HttpFunc) (ctx: HttpContext) =
+let private registrarse (next: HttpFunc) (ctx: HttpContext) =
     task {
         let! payload = ctx.BindJsonAsync<SignupPayload>()
         let newuser = { payload with contrasena = BCrypt.EnhancedHashPassword payload.contrasena }
-        let! result = AuthQueries.crearUsuario newuser
+        let! result = crearUsuario newuser
         match result with
-        | Ok _ ->
-            let token = generateToken newuser.correo
-            return! json
-                        { accessToken = token
-                          email = payload.correo } next ctx
+        | Ok resultado ->
+            match resultado |> List.tryHead with
+            | Some usuario ->
+                let token = generateToken usuario.correo
+                return! (json
+                             {| accessToken = token
+                                email = payload.correo
+                                usuario = usuario |} >=> setStatusCode (201)) next ctx
+            | None -> return! setStatusCode (400) next ctx
         | Error err ->
             printfn "%O" err
 
             return! setStatusCode 400 next ctx
     }
 
-let private forgot (next: HttpFunc) (ctx: HttpContext) = task { return! (text "Forgot!") next ctx }
+let private olvideContrasena (next: HttpFunc) (ctx: HttpContext) = task { return! (text "Forgot!") next ctx }
 
-let routes =
+let rutas =
     router {
-        post "/login" login
-        post "/signup" signup
-        post "/forgot" forgot
+        post "/login" inicioSesion
+        post "/signup" registrarse
+        post "/forgot" olvideContrasena
     }
