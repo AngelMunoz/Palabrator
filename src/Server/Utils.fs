@@ -1,3 +1,4 @@
+[<RequireQualifiedAccess>]
 module Utils
 
 let tryGetEnv =

@@ -1,11 +1,4 @@
-open Microsoft.AspNetCore.Builder
-open Microsoft.Extensions.DependencyInjection
-open FSharp.Control.Tasks.V2
-open Giraffe
 open Saturn
-open Types
-open Utils
-open Microsoft.AspNetCore.Authentication.JwtBearer
 
 let jsonpipeline = pipeline {
     plug acceptJson
@@ -14,7 +7,7 @@ let jsonpipeline = pipeline {
 let webApp = router {
     pipe_through jsonpipeline
 
-    forward "/auth" AuthActions.routes
+    forward "/auth" AccionesAuth.rutas
     forward "/api/perfiles" Perfiles.rutas
     forward "/api/palabras" Palabras.rutas
 }
