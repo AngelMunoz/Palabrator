@@ -5,12 +5,14 @@ CREATE TABLE IF NOT EXISTS usuarios (
   apellidos VARCHAR(100) NOT NULL CHECK (apellidos <> ''),
   correo VARCHAR(100) NOT NULL CHECK (correo <> ''),
   usuario VARCHAR(100) NOT NULL CHECK (usuario <> ''),
-  contrasena VARCHAR(100) NOT NULL CHECK (contrasena <> '')
+  contrasena VARCHAR(100) NOT NULL CHECK (contrasena <> ''),
+  UNIQUE(correo, usuario)
 );
 CREATE TABLE IF NOT EXISTS perfiles (
   id SERIAL PRIMARY KEY,
   nombre VARCHAR(50) NOT NULL CHECK (nombre <> ''),
-  usuario_id INTEGER REFERENCES usuarios
+  usuario_id INTEGER REFERENCES usuarios,
+  UNIQUE(nombre)
 );
 CREATE TABLE IF NOT EXISTS palabras (
   id SERIAL PRIMARY KEY,
