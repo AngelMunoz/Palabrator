@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS perfiles (
 );
 CREATE TABLE IF NOT EXISTS palabras (
   id SERIAL PRIMARY KEY,
-  palabra VARCHAR(100) NOT NULL CHECK (palabra <> '')
+  palabra VARCHAR(100) NOT NULL CHECK (palabra <> ''),
+  UNIQUE(palabra)
 );
 CREATE TABLE IF NOT EXISTS palabras_perfiles (
   perfil_id INTEGER REFERENCES perfiles ON DELETE CASCADE,
