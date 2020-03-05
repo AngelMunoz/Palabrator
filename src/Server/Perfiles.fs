@@ -15,31 +15,20 @@ let private crearPerfil (perfil: PerfilPayload) =
         let insert = """
                 INSERT INTO perfiles
                     (nombre, usuario_id)
-                VALUES(@nombre, @usuarioid);
-                """
-
-        let afterInsert = """
-                SELECT * FROM perfiles WHERE usuario_id = @usuarioid AND nombre = @nombre
+                VALUES(@nombre, @usuarioid) RETURNING id;
                 """
 
         let insertParams =
             [ "@nombre", Sql.string perfil.nombre
               "@usuarioid", Sql.int perfil.usuario ]
-        let! result = Database.prepareDefault insert insertParams |> Sql.executeNonQueryAsync
-        match result with
-        | Error err -> return Error err
-        | Ok _ ->
-            return! Database.prepareDefault afterInsert insertParams
-                    |> Sql.executeAsync (fun reader ->
-                        { id = reader.int "id"
-                          nombre = reader.string "nombre"
-                          usuario = Id(reader.int "usuario_id") })
+        return! Database.prepareDefault insert insertParams
+                |> Sql.executeAsync (fun reader -> {| perfil = reader.int "id" |})
     }
 
 let private obtenerPerfiles (userid: int) =
     async {
         let select = """
-            SELECT * FROM perfiles WHERE user_id = @userid
+            SELECT * FROM perfiles WHERE usuario_id = @userid
             """
         let selectParams = [ "@userid", Sql.int userid ]
         return! Database.prepareDefault select selectParams
@@ -70,7 +59,7 @@ let private perfiles (userid: int) (next: HttpFunc) (ctx: HttpContext) =
                 | Ok perfiles -> json perfiles next ctx
                 | Error err ->
                     printfn "%O" err
-                    setStatusCode (500) next ctx
+                    setStatusCode (422) next ctx
     }
 
 let private perfil (perfilid: int) (next: HttpFunc) (ctx: HttpContext) =
@@ -83,7 +72,7 @@ let private perfil (perfilid: int) (next: HttpFunc) (ctx: HttpContext) =
                     | None -> setStatusCode (404) next ctx
                 | Error err ->
                     printfn "%O" err
-                    setStatusCode (500) next ctx
+                    setStatusCode (422) next ctx
     }
 
 let nuevoPerfil (next: HttpFunc) (ctx: HttpContext) =
