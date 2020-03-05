@@ -18,7 +18,7 @@ let private crearUsuario (usuario: SignupPayload) =
         let insert = """
             INSERT INTO usuarios
                 (nombre, apellidos, correo, usuario, contrasena)
-            VALUES(@nombre, @apellidos, @correo, @usuario, @contrasena);
+            VALUES(@nombre, @apellidos, @correo, @usuario, @contrasena) RETURNING id, nombre, apellidos, correo, usuario;
             """
 
         let insertParams =
@@ -28,25 +28,13 @@ let private crearUsuario (usuario: SignupPayload) =
               "@usuario", Sql.string usuario.usuario
               "@contrasena", Sql.string usuario.contrasena ]
 
-        let afterInsert = """
-                SELECT id, nombre, apellidos, correo, usuario FROM usuarios WHERE correo = @correo AND usuario = @usuario
-                """
-
-        let afterInsertParams =
-            [ "@correo", Sql.string usuario.correo
-              "@usuario", Sql.string usuario.usuario ]
-
-        let! resultados = Database.prepareDefault insert insertParams |> Sql.executeNonQueryAsync
-        match resultados with
-        | Error err -> return Error err
-        | Ok _ ->
-            return! Database.prepareDefault afterInsert afterInsertParams
-                    |> Sql.executeAsync (fun reader ->
-                        {| id = reader.string "id"
-                           nombre = reader.string "nombre"
-                           apellidos = reader.string "apellidos"
-                           correo = reader.string "correo"
-                           usuario = reader.string "usuario" |})
+        return! Database.prepareDefault insert insertParams
+                |> Sql.executeAsync (fun reader ->
+                    {| id = reader.int "id"
+                       nombre = reader.string "nombre"
+                       apellidos = reader.string "apellidos"
+                       correo = reader.string "correo"
+                       usuario = reader.string "usuario" |})
     }
 
 let private buscarUsuario (criterio: BusquedaUsuario): Result<Usuario list, exn> Async =
