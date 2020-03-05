@@ -57,6 +57,7 @@ let palabrasPorPerfil (perfilid: int) =
             """
         let selectParams = [ "@perfilid", Sql.int perfilid ]
         return! Database.prepareDefault select selectParams
+                |> Sql.prepare
                 |> Sql.executeAsync (fun reader ->
                     {| palabraId = reader.int "palabra_id"
                        palabra = reader.string "palabra" |})
