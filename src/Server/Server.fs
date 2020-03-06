@@ -17,6 +17,16 @@ let app = application {
     use_router webApp
     memory_cache
     use_gzip
+    use_cors "CORS_Policy" (fun builder -> 
+                                if Utils.isProd then 
+                                    builder.WithOrigins [| "palabrator-api.herokuapp.com" |]
+                                else
+                                    builder
+                                        .AllowAnyOrigin()
+                                        .AllowAnyHeader()
+                                        .AllowAnyMethod()
+                                |> ignore
+                                ())
     use_jwt_authentication Utils.secretKey Utils.issuer
 }
 
